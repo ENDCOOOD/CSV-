@@ -24,15 +24,12 @@ if uploaded_file and API_KEY:
     if st.button("🚀 AIで解析を開始する", type="primary"):
         with st.spinner("Gemini AIがPDF/画像を解析中..."):
             try:
-                # アップロードファイルをGemini APIに渡すデータ形式に変換
                 bytes_data = uploaded_file.getvalue()
                 mime_type = uploaded_file.type
                 
-                # 利用可能なモデル（gemini-1.5-flash-latest または gemini-1.5-pro-latest）
-                model_name = "gemini-1.5-flash-latest"
-                model = genai.GenerativeModel(model_name)
+                # 標準の安定モデルを使用
+                model = genai.GenerativeModel("gemini-1.5-flash")
                 
-                # プロンプト（抽出フォーマットの指定）
                 prompt = """
                 提示された領収書、レシート、または請求書(PDF/画像)から以下の情報を読み取り、指定のJSON配列形式のみで出力してください。
                 解説文やMarkdownの装飾(```json 等)は一切含めないでください。
@@ -48,13 +45,11 @@ if uploaded_file and API_KEY:
                 ]
                 """
                 
-                # AIへ解析依頼
                 response = model.generate_content([
                     {"mime_type": mime_type, "data": bytes_data},
                     prompt
                 ])
                 
-                # クリーニングとJSONパース
                 res_text = response.text.strip()
                 if res_text.startswith("```json"):
                     res_text = res_text[7:]
