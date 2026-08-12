@@ -1,3 +1,4 @@
+Plaintext
 streamlit
 pandas
 google-generativeai
