@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import json
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 # --- 1. ページ設定とタイトル ---
 st.set_page_config(page_title="会計仕訳一括変換アプリ", page_icon="📑", layout="wide")
@@ -10,37 +11,23 @@ st.caption("Gemini AIがレシート・請求書(PDF/画像)を解析し、各�
 
 # --- 2. APIキーの設定 ---
 API_KEY = st.secrets.get("GEMINI_API_KEY", "")
-if API_KEY:
-    genai.configure(api_key=API_KEY)
-else:
+if not API_KEY:
     st.warning("⚠️ Gemini APIキーが設定されていません。Streamlit Cloudの「Secrets」に GEMINI_API_KEY を設定してください。")
 
 # --- 3. ファイルアップロード ---
 st.subheader("1. 会計資料のアップロード")
 uploaded_file = st.file_uploader("PDFまたは画像ファイルをアップロードしてください", type=["pdf", "png", "jpg", "jpeg"])
 
-# --- 4. Gemini AIによるリアル解析処理 ---
+# --- 4. Gemini AIによるリアル解析処理 (新 google-genai SDK対応) ---
 if uploaded_file and API_KEY:
     if st.button("🚀 AIで解析を開始する", type="primary"):
         with st.spinner("Gemini AIがPDF/画像を解析中..."):
             try:
+                # 新しいGenAIクライアントの初期化
+                client = genai.Client(api_key=API_KEY)
+                
                 bytes_data = uploaded_file.getvalue()
                 mime_type = uploaded_file.type
-                
-                # 利用可能なモデルを動的に取得・フォールバック選択
-                available_models = [m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods]
-                
-                # 優先順位に従ってモデルを選択
-                target_model = None
-                for m_candidate in ["models/gemini-2.0-flash", "models/gemini-1.5-flash", "models/gemini-pro"]:
-                    if m_candidate in available_models:
-                        target_model = m_candidate
-                        break
-                
-                if not target_model and available_models:
-                    target_model = available_models[0]
-                
-                model = genai.GenerativeModel(target_model if target_model else "gemini-2.0-flash")
                 
                 prompt = """
                 提示された領収書、レシート、または請求書(PDF/画像)から以下の情報を読み取り、指定のJSON配列形式のみで出力してください。
@@ -57,10 +44,14 @@ if uploaded_file and API_KEY:
                 ]
                 """
                 
-                response = model.generate_content([
-                    {"mime_type": mime_type, "data": bytes_data},
-                    prompt
-                ])
+                # 新しい Interactions API で呼び出し (最新の gemini-2.5-flash / gemini-2.0-flash を利用)
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=[
+                        types.Part.from_bytes(data=bytes_data, mime_type=mime_type),
+                        prompt
+                    ]
+                )
                 
                 res_text = response.text.strip()
                 if res_text.startswith("```json"):
@@ -126,3 +117,4 @@ if 'parsed_data' in st.session_state:
         df_ics = pd.DataFrame(ics_rows)
         csv_ics = df_ics.to_csv(index=False, encoding="shift_jis", errors="replace").encode("shift_jis", errors="replace")
         st.download_button("🔵 ICS用CSV", csv_ics, "ICS_Import.csv", "text/csv", use_container_width=True)
+        
