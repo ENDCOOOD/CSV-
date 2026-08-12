@@ -28,8 +28,9 @@ if uploaded_file and API_KEY:
                 bytes_data = uploaded_file.getvalue()
                 mime_type = uploaded_file.type
                 
-                # 最新の Gemini 2.0 Flash モデルを使用
-                model = genai.GenerativeModel("gemini-2.0-flash")
+                # 利用可能なモデル（gemini-1.5-flash-latest または gemini-1.5-pro-latest）
+                model_name = "gemini-1.5-flash-latest"
+                model = genai.GenerativeModel(model_name)
                 
                 # プロンプト（抽出フォーマットの指定）
                 prompt = """
