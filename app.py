@@ -18,7 +18,7 @@ if not API_KEY:
 st.subheader("1. 会計資料のアップロード")
 uploaded_file = st.file_uploader("PDFまたは画像ファイルをアップロードしてください", type=["pdf", "png", "jpg", "jpeg"])
 
-# --- 4. Gemini AIによるリアル解析処理 (新 google-genai SDK対応) ---
+# --- 4. Gemini AIによるリアル解析処理 ---
 if uploaded_file and API_KEY:
     if st.button("🚀 AIで解析を開始する", type="primary"):
         with st.spinner("Gemini AIがPDF/画像を解析中..."):
@@ -44,9 +44,9 @@ if uploaded_file and API_KEY:
                 ]
                 """
                 
-                # 新しい Interactions API で呼び出し (最新の gemini-2.5-flash / gemini-2.0-flash を利用)
+                # 安定して利用可能な gemini-2.0-flash モデルを使用
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-2.0-flash',
                     contents=[
                         types.Part.from_bytes(data=bytes_data, mime_type=mime_type),
                         prompt
@@ -117,4 +117,3 @@ if 'parsed_data' in st.session_state:
         df_ics = pd.DataFrame(ics_rows)
         csv_ics = df_ics.to_csv(index=False, encoding="shift_jis", errors="replace").encode("shift_jis", errors="replace")
         st.download_button("🔵 ICS用CSV", csv_ics, "ICS_Import.csv", "text/csv", use_container_width=True)
-        
