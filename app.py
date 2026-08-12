@@ -27,8 +27,20 @@ if uploaded_file and API_KEY:
                 bytes_data = uploaded_file.getvalue()
                 mime_type = uploaded_file.type
                 
-                # 標準の安定モデルを使用
-                model = genai.GenerativeModel("gemini-1.5-flash")
+                # 利用可能なモデルを動的に取得・フォールバック選択
+                available_models = [m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods]
+                
+                # 優先順位に従ってモデルを選択
+                target_model = None
+                for m_candidate in ["models/gemini-2.0-flash", "models/gemini-1.5-flash", "models/gemini-pro"]:
+                    if m_candidate in available_models:
+                        target_model = m_candidate
+                        break
+                
+                if not target_model and available_models:
+                    target_model = available_models[0]
+                
+                model = genai.GenerativeModel(target_model if target_model else "gemini-2.0-flash")
                 
                 prompt = """
                 提示された領収書、レシート、または請求書(PDF/画像)から以下の情報を読み取り、指定のJSON配列形式のみで出力してください。
